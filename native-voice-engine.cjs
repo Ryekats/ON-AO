@@ -84,6 +84,29 @@ class NativePlayerQueue {
   clear() {
     this.tracks = [];
   }
+
+  remove(removeQuery) {
+    if (typeof removeQuery === 'number') {
+      if (removeQuery < 0 || removeQuery >= this.tracks.length) return null;
+      const removed = this.tracks.splice(removeQuery, 1);
+      return { removed };
+    }
+    if (Array.isArray(removeQuery)) {
+      const removed = [];
+      const sorted = [...removeQuery].sort((a, b) => b - a);
+      for (const idx of sorted) {
+        if (typeof idx === 'number' && idx >= 0 && idx < this.tracks.length) {
+          removed.unshift(...this.tracks.splice(idx, 1));
+        }
+      }
+      return removed.length ? { removed } : null;
+    }
+    return null;
+  }
+
+  splice(start, count, ...items) {
+    return this.tracks.splice(start, count, ...items);
+  }
 }
 
 class NativeGuildPlayer extends EventEmitter {
@@ -634,12 +657,13 @@ class NativeGuildPlayer extends EventEmitter {
           inputType = streamData.type || StreamType.Arbitrary;
         }
 
+        const useInlineVolume = typeof this.volume === 'number' && this.volume !== 100;
         const resource = createAudioResource(finalStream, {
           inputType: inputType,
-          inlineVolume: true
+          inlineVolume: useInlineVolume
         });
 
-        if (resource.volume) {
+        if (useInlineVolume && resource.volume) {
           resource.volume.setVolume(Math.max(0.01, Math.min(1.0, this.volume / 100)));
         }
 
@@ -707,8 +731,14 @@ class NativeGuildPlayer extends EventEmitter {
   }
 
   buildFFmpegFilterString() {
-    if (!this._filters) return '';
     const parts = [];
+
+    // 0. Base Audio Normalization & Anti-Subsonic DC Offset Filter
+    // dynaudnorm with smooth Gaussian window (g=31) normalizes volume across intro/verse/chorus
+    // and prevents volume ducking when high-frequency vocals/drops occur.
+    parts.push('highpass=f=20,dynaudnorm=f=200:g=31:p=0.95:m=10:s=0');
+
+    if (!this._filters) return parts.join(',');
 
     // 1. Nightcore (High pitch + speed boost)
     if (this._filters.nightcore || (this._filters.timescale && this._filters.timescale.pitch > 1.1)) {
@@ -722,9 +752,9 @@ class NativeGuildPlayer extends EventEmitter {
     // 3. Bassboost (Rich sub-bass & mid-bass boost)
     if (this._filters.bassboost) {
       const lvl = Number(this._filters.bassboost) || 2;
-      if (lvl === 1) parts.push('bass=g=6:f=100:w=0.6');
-      else if (lvl === 2) parts.push('bass=g=11:f=100:w=0.6');
-      else if (lvl >= 3) parts.push('bass=g=16:f=100:w=0.6');
+      if (lvl === 1) parts.push('bass=g=5:f=100:w=0.6');
+      else if (lvl === 2) parts.push('bass=g=9:f=100:w=0.6');
+      else if (lvl >= 3) parts.push('bass=g=13:f=100:w=0.6');
     }
 
     // 4. 8D Surround Audio (True 360° rotational binaural stereo panning)
@@ -739,7 +769,7 @@ class NativeGuildPlayer extends EventEmitter {
       for (const eq of this._filters.eq) {
         if (typeof eq.band === 'number' && typeof eq.gain === 'number' && Math.abs(eq.gain) > 0.01) {
           const freq = freqs[eq.band] || (eq.band * 1000);
-          const gainDb = Math.round(eq.gain * 20);
+          const gainDb = Math.round(eq.gain * 15);
           if (gainDb !== 0) {
             eqParts.push(`equalizer=f=${freq}:width_type=o:width=1:g=${gainDb}`);
           }
@@ -751,15 +781,15 @@ class NativeGuildPlayer extends EventEmitter {
     } else if (this._filters.eqPreset && this._filters.eqPreset !== 'flat') {
       const preset = String(this._filters.eqPreset).toLowerCase().trim();
       if (preset === 'hifi') {
-        parts.push('treble=g=5,bass=g=4');
+        parts.push('treble=g=4,bass=g=3');
       } else if (preset === 'bass') {
-        parts.push('bass=g=10');
+        parts.push('bass=g=8');
       } else if (preset === 'deep bass' || preset === 'deepbass' || preset === 'deep') {
-        parts.push('bass=g=14:f=80');
+        parts.push('bass=g=11:f=80');
       } else if (preset === 'gaming' || preset === 'game') {
-        parts.push('equalizer=f=1000:t=q:w=1:g=3,equalizer=f=3000:t=q:w=1:g=4');
+        parts.push('equalizer=f=1000:t=q:w=1:g=2,equalizer=f=3000:t=q:w=1:g=3');
       } else if (preset === 'treble') {
-        parts.push('treble=g=7');
+        parts.push('treble=g=5');
       } else if (preset === 'studio') {
         parts.push('equalizer=f=250:t=q:w=1:g=-1,equalizer=f=4000:t=q:w=1:g=2');
       }

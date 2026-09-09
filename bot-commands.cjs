@@ -28,35 +28,35 @@ function getBandsForPreset(presetName = 'flat', bassboostLevel = 0) {
 
   const name = String(presetName || 'flat').toLowerCase().trim();
   if (name === 'hifi') {
-    [0.25, 0.20, 0.15, 0.05, 0, 0, 0, 0, 0, 0, 0, 0.10, 0.20, 0.25, 0.30].forEach((g, i) => bandsMap.set(i, g));
+    [0.10, 0.08, 0.05, 0.02, 0, 0, 0, 0, 0, 0, 0.02, 0.06, 0.10, 0.12, 0.15].forEach((g, i) => bandsMap.set(i, g));
   } else if (name === 'studio') {
-    [0.05, 0, 0, 0, 0, -0.05, 0.05, 0, 0.10, 0.15, 0.10, 0, 0, 0.05, 0].forEach((g, i) => bandsMap.set(i, g));
+    [0.02, 0, 0, 0, 0, -0.02, 0.02, 0, 0.05, 0.08, 0.05, 0, 0, 0.02, 0].forEach((g, i) => bandsMap.set(i, g));
   } else if (name === 'deep bass' || name === 'deepbass' || name === 'deep' || name === 'bass') {
-    [0.50, 0.40, 0.30, 0.15, 0.05, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].forEach((g, i) => bandsMap.set(i, g));
+    [0.25, 0.20, 0.15, 0.08, 0.02, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0].forEach((g, i) => bandsMap.set(i, g));
   } else if (name === 'gaming' || name === 'game') {
-    [0.15, 0.10, 0, 0, 0, 0.15, 0.20, 0.25, 0.30, 0.25, 0.15, 0, 0, 0, 0].forEach((g, i) => bandsMap.set(i, g));
+    [0.08, 0.05, 0, 0, 0, 0, 0.08, 0.10, 0.12, 0.15, 0.12, 0.08, 0, 0, 0].forEach((g, i) => bandsMap.set(i, g));
   } else if (name === 'treble') {
-    [0, 0, 0, 0, 0, 0, 0, 0, 0.10, 0.20, 0.30, 0.40, 0.45, 0.50, 0.50].forEach((g, i) => bandsMap.set(i, g));
+    [0, 0, 0, 0, 0, 0, 0, 0, 0.05, 0.10, 0.15, 0.20, 0.22, 0.25, 0.25].forEach((g, i) => bandsMap.set(i, g));
   } else if (name === 'vocal' || name === 'vocalboost' || name === 'vocal booster') {
-    // Vocal booster: Reduce low rumble (-0.15 on sub-bass), elevate vocal presence (1kHz - 4kHz)
-    [-0.15, -0.10, -0.05, 0.0, 0.05, 0.15, 0.25, 0.30, 0.25, 0.15, 0.05, 0.0, 0.0, 0.0, 0.0].forEach((g, i) => bandsMap.set(i, g));
+    // Vocal booster: Reduce low rumble (-0.08 on sub-bass), elevate vocal presence (1kHz - 4kHz)
+    [-0.08, -0.05, -0.02, 0.0, 0.02, 0.08, 0.15, 0.18, 0.15, 0.08, 0.02, 0.0, 0.0, 0.0, 0.0].forEach((g, i) => bandsMap.set(i, g));
   }
 
   const lvl = Number(bassboostLevel) || 0;
   if (lvl === 1) {
-    bandsMap.set(0, Math.min(1.0, (bandsMap.get(0) || 0) + 0.20));
-    bandsMap.set(1, Math.min(1.0, (bandsMap.get(1) || 0) + 0.15));
-    bandsMap.set(2, Math.min(1.0, (bandsMap.get(2) || 0) + 0.10));
+    bandsMap.set(0, Math.min(0.5, (bandsMap.get(0) || 0) + 0.12));
+    bandsMap.set(1, Math.min(0.5, (bandsMap.get(1) || 0) + 0.08));
+    bandsMap.set(2, Math.min(0.5, (bandsMap.get(2) || 0) + 0.05));
   } else if (lvl === 2) {
-    bandsMap.set(0, Math.min(1.0, (bandsMap.get(0) || 0) + 0.40));
-    bandsMap.set(1, Math.min(1.0, (bandsMap.get(1) || 0) + 0.30));
-    bandsMap.set(2, Math.min(1.0, (bandsMap.get(2) || 0) + 0.20));
-    bandsMap.set(3, Math.min(1.0, (bandsMap.get(3) || 0) + 0.10));
+    bandsMap.set(0, Math.min(0.5, (bandsMap.get(0) || 0) + 0.22));
+    bandsMap.set(1, Math.min(0.5, (bandsMap.get(1) || 0) + 0.16));
+    bandsMap.set(2, Math.min(0.5, (bandsMap.get(2) || 0) + 0.10));
+    bandsMap.set(3, Math.min(0.5, (bandsMap.get(3) || 0) + 0.05));
   } else if (lvl >= 3) {
-    bandsMap.set(0, Math.min(1.0, (bandsMap.get(0) || 0) + 0.65));
-    bandsMap.set(1, Math.min(1.0, (bandsMap.get(1) || 0) + 0.50));
-    bandsMap.set(2, Math.min(1.0, (bandsMap.get(2) || 0) + 0.35));
-    bandsMap.set(3, Math.min(1.0, (bandsMap.get(3) || 0) + 0.20));
+    bandsMap.set(0, Math.min(0.5, (bandsMap.get(0) || 0) + 0.32));
+    bandsMap.set(1, Math.min(0.5, (bandsMap.get(1) || 0) + 0.24));
+    bandsMap.set(2, Math.min(0.5, (bandsMap.get(2) || 0) + 0.16));
+    bandsMap.set(3, Math.min(0.5, (bandsMap.get(3) || 0) + 0.08));
   }
 
   const result = [];
@@ -1229,29 +1229,182 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
     const initiatorInVoice = initiatorId && voiceChannel?.members ? voiceChannel.members.has(initiatorId) : false;
     const isInitiator = !initiatorId || user.id === initiatorId;
 
-    if (!isInitiator && initiatorInVoice && !isSolo) {
+    const tracks = player.queue.tracks || [];
+    if (!tracks.length) {
+      return reply({
+        embeds: [new EmbedBuilder().setColor(0xf59e0b).setDescription(lang === 'en' ? '⚠️ The queue is currently empty!' : '⚠️ Antrean lagu saat ini sedang kosong!')]
+      });
+    }
+
+    let rawInput = (args.position !== undefined && args.position !== null ? String(args.position) : '') ||
+                   (args.query || args.subcommand || (args.rawArgs ? args.rawArgs.join(' ') : '') || '').trim();
+
+    if (!rawInput) {
       return reply({
         embeds: [
           new EmbedBuilder()
-            .setColor(0xf43f5e)
-            .setDescription(t('queue_initiator_only_remove', lang, { initiator: initiatorId }))
+            .setColor(0x3b82f6)
+            .setTitle(lang === 'en' ? '🗑️ Remove Track from Queue' : '🗑️ Hapus Lagu dari Antrean')
+            .setDescription(
+              lang === 'en'
+                ? `**Usage:** \`on remove <position | range | song name>\`\n\n**Examples:**\n• \`on remove 2\` (removes song #2)\n• \`on remove 2-5\` or \`on remove 2 5\` (removes songs 2 to 5)\n• \`on remove ${getTrackTitle(tracks[0]).slice(0, 20)}\` (removes by title)\n• \`on remove last\` (removes the last song)`
+                : `**Format:** \`on remove <urutan | rentang | judul lagu>\`\n\n**Contoh:**\n• \`on remove 2\` (menghapus antrean ke-2)\n• \`on remove 2-5\` atau \`on remove 2 5\` (menghapus urutan 2 s/d 5)\n• \`on remove ${getTrackTitle(tracks[0]).slice(0, 20)}\` (menghapus berdasarkan judul)\n• \`on remove last\` (menghapus lagu paling terakhir)`
+            )
         ]
       });
     }
 
-    if (!isDJ && !isSolo && !isInitiator) {
-      return reply({ embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(t('dj_only', lang))] });
-    }
-    const pos = parseInt(args.position, 10);
-    const tracks = player.queue.tracks;
-    if (isNaN(pos) || pos < 1 || pos > tracks.length) {
+    const checkPerms = (trackToCheck = null) => {
+      if (isDJ || isSolo || isInitiator) return true;
+      if (trackToCheck && trackToCheck.requester && (trackToCheck.requester.id === user.id || trackToCheck.requester === user.id)) {
+        return true;
+      }
+      return false;
+    };
+
+    // Case 1: 'last' or 'akhir'
+    if (rawInput.toLowerCase() === 'last' || rawInput.toLowerCase() === 'akhir') {
+      const targetIndex = tracks.length - 1;
+      const targetTrack = tracks[targetIndex];
+      if (!checkPerms(targetTrack)) {
+        if (!isInitiator && initiatorInVoice && !isSolo) {
+          return reply({ embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(t('queue_initiator_only_remove', lang, { initiator: initiatorId }))] });
+        }
+        return reply({ embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(t('dj_only', lang))] });
+      }
+
+      let removed;
+      if (typeof player.queue.remove === 'function') {
+        const res = await player.queue.remove(targetIndex);
+        removed = (res && res.removed && res.removed[0]) ? res.removed[0] : targetTrack;
+      } else {
+        removed = tracks.splice(targetIndex, 1)[0];
+      }
+
+      if (typeof syncPlayerState === 'function') syncPlayerState(player);
+      if (typeof syncAllGuildsState === 'function') syncAllGuildsState(botClient);
       return reply({
-        embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(t('skipto_invalid', lang, { max: tracks.length }))]
+        embeds: [new EmbedBuilder().setColor(0x10b981).setDescription(`🗑️ ${lang === 'en' ? 'Removed last track' : 'Dihapus lagu terakhir'}: **${getTrackTitle(removed || targetTrack)}**`)]
       });
     }
-    const removed = tracks.splice(pos - 1, 1)[0];
+
+    // Case 2: Range (e.g. 2-5, 2 to 5, 2 5)
+    const rangeMatch = rawInput.match(/^(\d+)\s*(?:-|to|\s+)\s*(\d+)$/i);
+    if (rangeMatch) {
+      if (!checkPerms()) {
+        if (!isInitiator && initiatorInVoice && !isSolo) {
+          return reply({ embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(t('queue_initiator_only_remove', lang, { initiator: initiatorId }))] });
+        }
+        return reply({ embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(t('dj_only', lang))] });
+      }
+
+      let start = parseInt(rangeMatch[1], 10);
+      let end = parseInt(rangeMatch[2], 10);
+      if (start > end) [start, end] = [end, start];
+
+      if (start < 1 || end > tracks.length) {
+        return reply({
+          embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(t('skipto_invalid', lang, { max: tracks.length }))]
+        });
+      }
+
+      const count = end - start + 1;
+      const indicesToRemove = [];
+      for (let i = start - 1; i < end; i++) indicesToRemove.push(i);
+
+      if (typeof player.queue.remove === 'function') {
+        await player.queue.remove(indicesToRemove);
+      } else {
+        tracks.splice(start - 1, count);
+      }
+
+      if (typeof syncPlayerState === 'function') syncPlayerState(player);
+      if (typeof syncAllGuildsState === 'function') syncAllGuildsState(botClient);
+      return reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x10b981)
+            .setDescription(`🗑️ ${lang === 'en' ? `Removed **${count}** tracks (positions #${start} - #${end}) from queue` : `Berhasil menghapus **${count}** lagu (urutan #${start} - #${end}) dari antrean`}`)
+        ]
+      });
+    }
+
+    // Case 3: Single number index (e.g. 2)
+    const singleNum = parseInt(rawInput, 10);
+    if (!isNaN(singleNum) && /^\d+$/.test(rawInput)) {
+      if (singleNum < 1 || singleNum > tracks.length) {
+        return reply({
+          embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(t('skipto_invalid', lang, { max: tracks.length }))]
+        });
+      }
+
+      const targetIndex = singleNum - 1;
+      const targetTrack = tracks[targetIndex];
+
+      if (!checkPerms(targetTrack)) {
+        if (!isInitiator && initiatorInVoice && !isSolo) {
+          return reply({ embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(t('queue_initiator_only_remove', lang, { initiator: initiatorId }))] });
+        }
+        return reply({ embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(t('dj_only', lang))] });
+      }
+
+      let removed;
+      if (typeof player.queue.remove === 'function') {
+        const res = await player.queue.remove(targetIndex);
+        removed = (res && res.removed && res.removed[0]) ? res.removed[0] : targetTrack;
+      } else {
+        removed = tracks.splice(targetIndex, 1)[0];
+      }
+
+      if (typeof syncPlayerState === 'function') syncPlayerState(player);
+      if (typeof syncAllGuildsState === 'function') syncAllGuildsState(botClient);
+      return reply({
+        embeds: [new EmbedBuilder().setColor(0x10b981).setDescription(`🗑️ ${lang === 'en' ? 'Removed' : 'Dihapus'} (#${singleNum}): **${getTrackTitle(removed || targetTrack)}**`)]
+      });
+    }
+
+    // Case 4: Search by title / keyword
+    const searchLow = rawInput.toLowerCase();
+    const foundIndex = tracks.findIndex(t => {
+      const title = String(getTrackTitle(t) || '').toLowerCase();
+      const author = String(getTrackAuthor(t) || '').toLowerCase();
+      return title.includes(searchLow) || author.includes(searchLow);
+    });
+
+    if (foundIndex === -1) {
+      return reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0xf43f5e)
+            .setDescription(
+              lang === 'en'
+                ? `❌ No track matching **"${rawInput}"** found in the queue!`
+                : `❌ Tidak ditemukan lagu yang cocok dengan **"${rawInput}"** di dalam antrean!`
+            )
+        ]
+      });
+    }
+
+    const targetTrack = tracks[foundIndex];
+    if (!checkPerms(targetTrack)) {
+      if (!isInitiator && initiatorInVoice && !isSolo) {
+        return reply({ embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(t('queue_initiator_only_remove', lang, { initiator: initiatorId }))] });
+      }
+      return reply({ embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(t('dj_only', lang))] });
+    }
+
+    let removed;
+    if (typeof player.queue.remove === 'function') {
+      const res = await player.queue.remove(foundIndex);
+      removed = (res && res.removed && res.removed[0]) ? res.removed[0] : targetTrack;
+    } else {
+      removed = tracks.splice(foundIndex, 1)[0];
+    }
+
+    if (typeof syncPlayerState === 'function') syncPlayerState(player);
+    if (typeof syncAllGuildsState === 'function') syncAllGuildsState(botClient);
     return reply({
-      embeds: [new EmbedBuilder().setColor(0x10b981).setDescription(`🗑️ ${lang === 'en' ? 'Removed' : 'Dihapus'}: **${getTrackTitle(removed)}**`)]
+      embeds: [new EmbedBuilder().setColor(0x10b981).setDescription(`🗑️ ${lang === 'en' ? 'Removed' : 'Dihapus'} (#${foundIndex + 1}): **${getTrackTitle(removed || targetTrack)}**`)]
     });
   }
 
@@ -1260,8 +1413,9 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
     if (!isDJ && !isSolo) {
       return reply({ embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(t('dj_only', lang))] });
     }
-    const pos = parseInt(args.position, 10);
-    const tracks = player.queue.tracks;
+    const rawPos = args.position !== undefined && args.position !== null ? args.position : (args.query || args.subcommand || (args.rawArgs && args.rawArgs[0]));
+    const pos = parseInt(rawPos, 10);
+    const tracks = player.queue.tracks || [];
     if (isNaN(pos) || pos < 1 || pos > tracks.length) {
       return reply({
         embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(t('skipto_invalid', lang, { max: tracks.length }))]
@@ -1270,6 +1424,7 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
     const targetTrack = tracks[pos - 1];
     player.queue.tracks.splice(0, pos - 1);
     await player.skip();
+    if (typeof syncPlayerState === 'function') syncPlayerState(player);
     return reply({
       embeds: [new EmbedBuilder().setColor(0x10b981).setDescription(t('skipto_success', lang, { pos, title: getTrackTitle(targetTrack) }))]
     });
@@ -1280,14 +1435,16 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
     if (!isDJ && !isSolo) {
       return reply({ embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(t('dj_only', lang))] });
     }
-    const from = parseInt(args.from, 10);
-    const to = parseInt(args.to, 10);
-    const tracks = player.queue.tracks;
+    const tokens = (args.query || '').split(/\s+/).filter(Boolean);
+    const from = parseInt(args.from !== undefined ? args.from : (args.subArg1 || (args.rawArgs && args.rawArgs[0]) || tokens[0]), 10);
+    const to = parseInt(args.to !== undefined ? args.to : (args.subArg2 || (args.rawArgs && args.rawArgs[1]) || tokens[1]), 10);
+    const tracks = player.queue.tracks || [];
     if (isNaN(from) || isNaN(to) || from < 1 || to < 1 || from > tracks.length || to > tracks.length) {
       return reply({ embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(t('move_invalid', lang))] });
     }
     const [target] = player.queue.tracks.splice(from - 1, 1);
     player.queue.tracks.splice(to - 1, 0, target);
+    if (typeof syncPlayerState === 'function') syncPlayerState(player);
     return reply({
       embeds: [new EmbedBuilder().setColor(0x10b981).setDescription(t('move_success', lang, { from, to }))]
     });
@@ -1298,15 +1455,17 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
     if (!isDJ && !isSolo) {
       return reply({ embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(t('dj_only', lang))] });
     }
-    const pos1 = parseInt(args.pos1, 10);
-    const pos2 = parseInt(args.pos2, 10);
-    const tracks = player.queue.tracks;
+    const tokens = (args.query || '').split(/\s+/).filter(Boolean);
+    const pos1 = parseInt(args.pos1 !== undefined ? args.pos1 : (args.subArg1 || (args.rawArgs && args.rawArgs[0]) || tokens[0]), 10);
+    const pos2 = parseInt(args.pos2 !== undefined ? args.pos2 : (args.subArg2 || (args.rawArgs && args.rawArgs[1]) || tokens[1]), 10);
+    const tracks = player.queue.tracks || [];
     if (isNaN(pos1) || isNaN(pos2) || pos1 < 1 || pos2 < 1 || pos1 > tracks.length || pos2 > tracks.length) {
       return reply({ embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(t('swap_invalid', lang))] });
     }
     const temp = tracks[pos1 - 1];
     tracks[pos1 - 1] = tracks[pos2 - 1];
     tracks[pos2 - 1] = temp;
+    if (typeof syncPlayerState === 'function') syncPlayerState(player);
     return reply({
       embeds: [new EmbedBuilder().setColor(0x10b981).setDescription(t('swap_success', lang, { pos1, pos2 }))]
     });
@@ -1317,8 +1476,9 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
     const currentMode = player.repeatMode || 'off';
     let nextMode = 'track';
 
-    if (args.mode && ['off', 'track', 'queue'].includes(args.mode.toLowerCase())) {
-      nextMode = args.mode.toLowerCase();
+    const inputMode = (args.mode || args.query || args.subcommand || (args.rawArgs && args.rawArgs[0]) || '').toLowerCase().trim();
+    if (inputMode && ['off', 'track', 'queue'].includes(inputMode)) {
+      nextMode = inputMode;
     } else {
       if (currentMode === 'track') nextMode = 'queue';
       else if (currentMode === 'queue') nextMode = 'off';
@@ -1326,6 +1486,7 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
 
     player.setRepeatMode(nextMode);
     const modeLabel = nextMode === 'track' ? t('loop_track', lang) : nextMode === 'queue' ? t('loop_queue', lang) : t('loop_off', lang);
+    if (typeof syncPlayerState === 'function') syncPlayerState(player);
 
     return reply({
       embeds: [new EmbedBuilder().setColor(0x8b5cf6).setDescription(t('loop_status', lang, { mode: modeLabel }))]
@@ -1334,7 +1495,8 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
 
   // ==================== 15. VOLUME ====================
   if (cmdName === 'volume') {
-    if (!args.level) {
+    const rawLevel = args.level !== undefined && args.level !== null ? args.level : (args.query || args.subcommand || (args.rawArgs && args.rawArgs[0]));
+    if (!rawLevel) {
       const slider = createProgressBar(player.volume, 100, 10);
       return reply({
         embeds: [new EmbedBuilder().setColor(0x6366f1).setDescription(t('volume_current', lang, { slider, level: player.volume }))]
@@ -1345,7 +1507,7 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
       return reply({ embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(t('dj_only', lang))] });
     }
 
-    const vol = parseInt(args.level, 10);
+    const vol = parseInt(rawLevel, 10);
     if (isNaN(vol) || vol < 1 || vol > 100) {
       return reply({
         embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription('❌ Volume must be 1-100.')]
@@ -1353,6 +1515,7 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
     }
 
     await player.setVolume(vol);
+    if (typeof syncPlayerState === 'function') syncPlayerState(player);
     return reply({
       embeds: [new EmbedBuilder().setColor(0x10b981).setDescription(t('volume_set', lang, { level: vol }))]
     });
@@ -1458,8 +1621,8 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
 
   // ==================== 18. SEEK & FORWARD & REWIND ====================
   if (cmdName === 'seek') {
-    let rawSec = args.seconds;
-    if (rawSec === undefined || rawSec === null || rawSec === '') {
+    let rawSec = args.seconds !== undefined && args.seconds !== null ? args.seconds : (args.query || args.subcommand || (args.rawArgs ? args.rawArgs.join(' ') : ''));
+    if (rawSec === undefined || rawSec === null || String(rawSec).trim() === '') {
       return reply({ embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(lang === 'en' ? '❌ Please specify time in seconds, MM:SS, or 1m30s (e.g. `on seek 30` or `on seek 1:30`)' : '❌ Harap tentukan waktu dalam detik, MM:SS, atau 1m30s (contoh: `on seek 30` atau `on seek 1:30`)')] });
     }
 
@@ -1525,7 +1688,8 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
   }
 
   if (cmdName === 'forward') {
-    const sec = parseInt(args.seconds || 15, 10);
+    const rawVal = args.seconds !== undefined && args.seconds !== null ? args.seconds : (args.query || args.subcommand || (args.rawArgs && args.rawArgs[0]));
+    const sec = parseInt(rawVal || 15, 10);
     const curPos = player.position || 0;
     const curTrack = player.queue.current;
     const maxDur = curTrack ? getTrackDuration(curTrack) : 86400000;
@@ -1541,7 +1705,8 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
   }
 
   if (cmdName === 'rewind') {
-    const sec = parseInt(args.seconds || 15, 10);
+    const rawVal = args.seconds !== undefined && args.seconds !== null ? args.seconds : (args.query || args.subcommand || (args.rawArgs && args.rawArgs[0]));
+    const sec = parseInt(rawVal || 15, 10);
     const curPos = player.position || 0;
     const newPos = Math.max(0, curPos - (sec * 1000));
     player.position = newPos;
@@ -1741,7 +1906,8 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
 
   // ==================== 24. AUDIO FILTERS ====================
   if (cmdName === 'bassboost') {
-    const rawLevel = parseInt(args.level || (args._ && args._[0]) || 2, 10);
+    const rawVal = args.level !== undefined && args.level !== null ? args.level : (args.query || args.subcommand || (args.rawArgs && args.rawArgs[0]) || (args._ && args._[0]) || 2);
+    const rawLevel = parseInt(rawVal, 10);
     const level = (rawLevel >= 1 && rawLevel <= 3) ? rawLevel : 2;
     try {
       if (player.set) player.set('filter_bassboost', level);
@@ -1803,7 +1969,7 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
   }
 
   if (cmdName === 'equalizer') {
-    const rawPreset = String(args.preset || (args._ && args._[0]) || 'hifi').toLowerCase().trim();
+    const rawPreset = String(args.preset || args.query || args.subcommand || (args.rawArgs && args.rawArgs[0]) || (args._ && args._[0]) || 'hifi').toLowerCase().trim();
     const presetsMap = {
       hifi: 'hifi',
       studio: 'studio',
@@ -1927,7 +2093,8 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
 
   // ==================== 24D. CROSSFADE / GAPLESS PLAYBACK ====================
   if (cmdName === 'crossfade') {
-    const rawSec = parseInt(args.seconds || (args._ && args._[0]), 10);
+    const rawVal = args.seconds !== undefined && args.seconds !== null ? args.seconds : (args.query || args.subcommand || (args.rawArgs && args.rawArgs[0]) || (args._ && args._[0]));
+    const rawSec = parseInt(rawVal, 10);
     let newSec = isNaN(rawSec) ? (player.get && player.get('crossfade_seconds') ? 0 : 1) : rawSec;
     if (newSec < 0) newSec = 0;
     if (newSec > 5) newSec = 5;
