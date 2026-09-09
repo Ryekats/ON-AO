@@ -1,30 +1,25 @@
 {
   "active": true,
-  "isPlaying": true,
-  "isPaused": false,
   "guildId": "873228006078939196",
-  "current": {
-    "title": "Bintang Kehidupan",
-    "artist": "Nike Ardilla",
-    "durationMs": 267000,
-    "positionMs": 91847,
-    "uri": "https://www.youtube.com/watch?v=CjtW1zwJytA",
-    "artworkUrl": "https://yt3.googleusercontent.com/muTIC7-TmBMQWyZkdlBenb3mO2RRyajPzyiw3E7-8Dz83Mpt31H1sv7FUAdh1eWMUqsHtsCPUL6-QSU=w1000-h1000",
-    "requester": "shutupbitchesss"
-  },
-  "queue": [
-    {
-      "title": "Korban Setia (feat. Nelly Ehko)",
-      "artist": "Roni Siho",
-      "durationMs": 241000,
-      "uri": "https://www.youtube.com/watch?v=6DByt44qEJ4",
-      "artworkUrl": "https://yt3.googleusercontent.com/Wb6OZ9X7Ff0DAzAZHdWSVZZTI6MI8B5UPPs3eYxsjSEgqEON-ear92l8vkztLPztNcfR-Xk-4FZwtqdC7Q=w1000-h1000"
-    }
-  ],
-  "queueCount": 1,
+  "isPlaying": false,
+  "isPaused": false,
+  "current": null,
+  "position": 0,
+  "duration": 0,
   "volume": 100,
   "loop": "off",
   "autoplay": false,
-  "filter": "none",
-  "updatedAt": 1788889836860
+  "is247": false,
+  "filter": "Normal",
+  "filter_eq": "flat",
+  "bassboost": 0,
+  "nightcore": false,
+  "vaporwave": false,
+  "eightD": false,
+  "vocalboost": false,
+  "crossfade": 0,
+  "voiceChannelId": "1539137362204958830",
+  "queueCount": 0,
+  "queue": [],
+  "updatedAt": 1788933385401
 }

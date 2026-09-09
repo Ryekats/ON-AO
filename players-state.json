@@ -1,0 +1,180 @@
+{
+  "1141348047738130513": {
+    "active": true,
+    "guildId": "1141348047738130513",
+    "isPlaying": true,
+    "isPaused": false,
+    "current": {
+      "title": "You're All I Want",
+      "author": "Cigarettes After Sex",
+      "duration": 265000,
+      "uri": "https://www.youtube.com/watch?v=KIXLaPL6czk",
+      "artworkUrl": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da842410743bc8bea0ba46929dc3",
+      "requester": "north_uin"
+    },
+    "position": 10664,
+    "duration": 265000,
+    "volume": 100,
+    "loop": "queue",
+    "autoplay": false,
+    "is247": false,
+    "filter": "Normal",
+    "filter_eq": "flat",
+    "bassboost": 0,
+    "nightcore": false,
+    "vaporwave": false,
+    "eightD": false,
+    "vocalboost": false,
+    "crossfade": 0,
+    "voiceChannelId": "1539595598712279100",
+    "queueCount": 23,
+    "queue": [
+      {
+        "title": "Truly",
+        "author": "Cigarettes After Sex",
+        "duration": 244000,
+        "uri": "https://www.youtube.com/watch?v=CTuoMEAkKqM",
+        "artworkUrl": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da842410743bc8bea0ba46929dc3",
+        "requester": "north_uin"
+      },
+      {
+        "title": "Each Time You Fall in Love",
+        "author": "Cigarettes After Sex",
+        "duration": 291000,
+        "uri": "https://www.youtube.com/watch?v=U10hkvisIsI",
+        "artworkUrl": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da842410743bc8bea0ba46929dc3",
+        "requester": "north_uin"
+      },
+      {
+        "title": "Nothing's Gonna Hurt You Baby",
+        "author": "Cigarettes After Sex",
+        "duration": 287000,
+        "uri": "https://www.youtube.com/watch?v=FFbjd7COTHI",
+        "artworkUrl": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da842410743bc8bea0ba46929dc3",
+        "requester": "north_uin"
+      },
+      {
+        "title": "Cuddle",
+        "author": "Sleeping After Pills",
+        "duration": 256000,
+        "uri": "https://www.youtube.com/watch?v=j-kur7mJNj4",
+        "artworkUrl": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da842410743bc8bea0ba46929dc3",
+        "requester": "north_uin"
+      },
+      {
+        "title": "John Wayne",
+        "author": "Cigarettes After Sex",
+        "duration": 259000,
+        "uri": "https://www.youtube.com/watch?v=0pMZnm3w-Pw",
+        "artworkUrl": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da842410743bc8bea0ba46929dc3",
+        "requester": "north_uin"
+      },
+      {
+        "title": "Sunsetz",
+        "author": "Cigarettes After Sex",
+        "duration": 215000,
+        "uri": "https://www.youtube.com/watch?v=eVRbaYq5Aw4",
+        "artworkUrl": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da842410743bc8bea0ba46929dc3",
+        "requester": "north_uin"
+      },
+      {
+        "title": "Young & Dumb",
+        "author": "Cigarettes After Sex",
+        "duration": 274000,
+        "uri": "https://www.youtube.com/watch?v=RjK6eaTcTnU",
+        "artworkUrl": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da842410743bc8bea0ba46929dc3",
+        "requester": "north_uin"
+      },
+      {
+        "title": "Cry",
+        "author": "Cigarettes After Sex",
+        "duration": 257000,
+        "uri": "https://www.youtube.com/watch?v=ENZZOh12tZ8",
+        "artworkUrl": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da842410743bc8bea0ba46929dc3",
+        "requester": "north_uin"
+      },
+      {
+        "title": "Sweet",
+        "author": "Cigarettes After Sex",
+        "duration": 292000,
+        "uri": "https://www.youtube.com/watch?v=z1N52_9FSOs",
+        "artworkUrl": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da842410743bc8bea0ba46929dc3",
+        "requester": "north_uin"
+      },
+      {
+        "title": "Isolation",
+        "author": "gloomhush",
+        "duration": 232000,
+        "uri": "https://www.youtube.com/watch?v=VxU-oEiIEaA",
+        "artworkUrl": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da842410743bc8bea0ba46929dc3",
+        "requester": "north_uin"
+      },
+      {
+        "title": "A Sorrowful Reunion",
+        "author": "Reality Club",
+        "duration": 260000,
+        "uri": "https://www.youtube.com/watch?v=zlw7Q5Td8PY",
+        "artworkUrl": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da842410743bc8bea0ba46929dc3",
+        "requester": "north_uin"
+      },
+      {
+        "title": "Dreaming On",
+        "author": "Sleeping After Pills",
+        "duration": 209000,
+        "uri": "https://www.youtube.com/watch?v=7aZiRuYrN0g",
+        "artworkUrl": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da842410743bc8bea0ba46929dc3",
+        "requester": "north_uin"
+      },
+      {
+        "title": "Heavenly",
+        "author": "Cigarettes After Sex",
+        "duration": 287000,
+        "uri": "https://www.youtube.com/watch?v=_nbTztJARrg",
+        "artworkUrl": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da842410743bc8bea0ba46929dc3",
+        "requester": "north_uin"
+      },
+      {
+        "title": "Apocalypse",
+        "author": "Cigarettes After Sex",
+        "duration": 291000,
+        "uri": "https://www.youtube.com/watch?v=DdI598gKkKw",
+        "artworkUrl": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da842410743bc8bea0ba46929dc3",
+        "requester": "north_uin"
+      },
+      {
+        "title": "Flash",
+        "author": "Cigarettes After Sex",
+        "duration": 275000,
+        "uri": "https://www.youtube.com/watch?v=qlZIGz-S92I",
+        "artworkUrl": "https://image-cdn-fa.spotifycdn.com/image/ab67706c0000da842410743bc8bea0ba46929dc3",
+        "requester": "north_uin"
+      }
+    ],
+    "updatedAt": 1788933048549
+  },
+  "873228006078939196": {
+    "active": true,
+    "guildId": "873228006078939196",
+    "isPlaying": false,
+    "isPaused": false,
+    "current": null,
+    "position": 0,
+    "duration": 0,
+    "volume": 100,
+    "loop": "off",
+    "autoplay": false,
+    "is247": false,
+    "filter": "Normal",
+    "filter_eq": "flat",
+    "bassboost": 0,
+    "nightcore": false,
+    "vaporwave": false,
+    "eightD": false,
+    "vocalboost": false,
+    "crossfade": 0,
+    "voiceChannelId": "1539137362204958830",
+    "queueCount": 0,
+    "queue": [],
+    "updatedAt": 1788933385401
+  }
+}

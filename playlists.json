@@ -1,0 +1,18 @@
+{
+  "user123": {
+    "My Favorites": {
+      "name": "My Favorites",
+      "tracks": [
+        {
+          "title": "Track 1",
+          "author": "Artist 1",
+          "duration": 180000,
+          "uri": "",
+          "artworkUrl": null
+        }
+      ],
+      "createdAt": 1788933466326,
+      "updatedAt": 1788933466326
+    }
+  }
+}

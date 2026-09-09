@@ -303,13 +303,22 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
     syncPlayerState,
     triggerAutoplayNext,
     fetchAutoplayRecommendation,
-    handleControllerSkipWithAutoplay
+    handleControllerSkipWithAutoplay,
+    getUserPlaylists,
+    getPlaylist,
+    createPlaylist,
+    addTrackToPlaylist,
+    removeTrackFromPlaylist,
+    deletePlaylist,
+    resolveYouTubePlaylist,
+    createUniversalTrack
   } = helpers;
 
+  const isInteraction = Boolean(ctx.isRepliable?.() || ctx.reply);
   const isSlash = Boolean(ctx.isChatInputCommand?.());
   const member = ctx.member;
   const guild = ctx.guild;
-  const user = isSlash ? ctx.user : ctx.author;
+  const user = isInteraction ? (ctx.user || ctx.author) : (ctx.author || ctx.user);
 
   if (user) recordUserCommand(user);
 
@@ -439,6 +448,10 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
     'lyric': 'lyrics',
     'ly': 'lyrics',
     'radio': 'radio',
+    'playlist': 'playlist',
+    'pl': 'playlist',
+    'playlists': 'playlist',
+    'customplaylist': 'playlist',
     'profile': 'profile',
     'user': 'profile',
     'me': 'profile',
@@ -455,23 +468,28 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
 
   const reply = async (payload) => {
     try {
-      if (isSlash) {
+      if (isInteraction) {
         if (ctx.deferred || ctx.replied) {
-          return await ctx.editReply(payload);
+          return await ctx.followUp({ ...payload, fetchReply: true }).catch(async () => {
+            return await ctx.editReply({ ...payload, fetchReply: true });
+          });
         }
-        return await ctx.reply(payload);
+        return await ctx.reply({ ...payload, fetchReply: true });
       } else {
         return await ctx.channel.send(payload);
       }
     } catch (err) {
       console.warn('[REPLY ERROR]', err.message);
-      // Fallback: If sending embed fails due to missing EmbedLinks permission in text channel
-      if (!isSlash && payload && payload.embeds && payload.embeds.length > 0) {
+      if (isInteraction) {
+        try {
+          return await ctx.followUp({ ...payload, fetchReply: true });
+        } catch (e2) {}
+      } else if (payload && payload.embeds && payload.embeds.length > 0) {
         try {
           const firstEmbed = payload.embeds[0];
           const text = firstEmbed.data?.description || firstEmbed.data?.title || '⚠️ [Embed cannot be sent: missing permissions]';
           return await ctx.channel.send({ content: text });
-        } catch (e2) {}
+        } catch (e3) {}
       }
     }
   };
@@ -654,17 +672,47 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
     player = await getOrCreatePlayer();
 
     let searchRes;
-    try {
-      searchRes = await safePlayerSearch(player, query, user);
-    } catch (err) {
-      return reply({
-        embeds: [
-          new EmbedBuilder()
-            .setColor(0xf43f5e)
-            .setTitle(t('search_error', lang))
-            .setDescription(t('search_error_desc', lang, { msg: err.message }))
-        ]
-      });
+
+    // Check if query refers to a saved custom playlist first (if not a direct URL)
+    if (!/^https?:\/\//i.test(query.trim()) && typeof getPlaylist === 'function') {
+      const savedPl = getPlaylist(user.id, query.trim());
+      if (savedPl && savedPl.tracks && savedPl.tracks.length > 0) {
+        searchRes = {
+          loadType: 'playlist',
+          playlist: {
+            title: savedPl.name,
+            name: savedPl.name,
+            artworkUrl: savedPl.tracks[0]?.artworkUrl || null
+          },
+          tracks: savedPl.tracks.map(t => (typeof createUniversalTrack === 'function' ? createUniversalTrack(t, user) : {
+            ...t,
+            requester: user,
+            info: {
+              title: t.title || 'Track',
+              author: t.author || 'Artist',
+              duration: t.duration || 180000,
+              uri: t.uri || '',
+              artworkUrl: t.artworkUrl || null,
+              requester: user
+            }
+          }))
+        };
+      }
+    }
+
+    if (!searchRes) {
+      try {
+        searchRes = await safePlayerSearch(player, query, user);
+      } catch (err) {
+        return reply({
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0xf43f5e)
+              .setTitle(t('search_error', lang))
+              .setDescription(t('search_error_desc', lang, { msg: err.message }))
+          ]
+        });
+      }
     }
 
     if (!searchRes || !searchRes.tracks || searchRes.tracks.length === 0) {
@@ -677,9 +725,10 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
       });
     }
 
-    if (searchRes.playlist) {
+    if (searchRes.playlist || searchRes.loadType === 'playlist') {
+      const plMeta = searchRes.playlist || { name: 'Playlist', artworkUrl: null };
       await player.queue.add(searchRes.tracks);
-      recordPlaybackSession({ title: searchRes.playlist.name, duration: searchRes.tracks.length * 180000 }, user, guild, voiceChannel);
+      recordPlaybackSession({ title: plMeta.name || plMeta.title || 'Playlist', duration: searchRes.tracks.length * 180000 }, user, guild, voiceChannel);
       if (!player.playing) {
         player._skipTrackStartNotification = Date.now() + 10000;
         if (player.set) player.set('skipTrackStartNotification', Date.now() + 10000);
@@ -690,7 +739,7 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
         .setColor(0x10b981)
         .setAuthor({ name: 'On Ao Music Studio', iconURL: client.user.displayAvatarURL() })
         .setTitle(t('playlist_added', lang))
-        .setDescription(`**${searchRes.playlist.name}**\n${t('playlist_tracks', lang, { count: searchRes.tracks.length })}\n⚡ *${lang === 'en' ? 'Fast playlist loading completed' : 'Playlist berhasil dimuat secara instan'}*`)
+        .setDescription(`**${plMeta.name || plMeta.title || 'Playlist'}**\n${t('playlist_tracks', lang, { count: searchRes.tracks.length })}\n⚡ *${lang === 'en' ? 'Fast playlist loading completed' : 'Playlist berhasil dimuat secara instan'}*`)
         .addFields(
           { name: t('requested_by', lang), value: user.username, inline: true },
           { name: t('channel', lang), value: voiceChannel.name, inline: true },
@@ -698,8 +747,8 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
         )
         .setTimestamp();
 
-      if (searchRes.playlist.artworkUrl) {
-        playlistEmbed.setThumbnail(searchRes.playlist.artworkUrl);
+      if (plMeta.artworkUrl) {
+        playlistEmbed.setThumbnail(plMeta.artworkUrl);
       }
 
       return reply({
@@ -1150,42 +1199,65 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
       });
 
       collector.on('collect', async (btnInt) => {
-        if (btnInt.customId === 'q_first') currentPage = 1;
-        else if (btnInt.customId === 'q_prev') currentPage = Math.max(1, currentPage - 1);
-        else if (btnInt.customId === 'q_next') currentPage = Math.min(totalPages, currentPage + 1);
-        else if (btnInt.customId === 'q_last') currentPage = totalPages;
-        else if (btnInt.customId === 'q_clear') {
-          const initiatorId = player.sessionInitiatorId;
-          const btnVcMembers = btnInt.member?.voice?.channel?.members;
-          const initiatorInVoice = initiatorId && btnVcMembers ? btnVcMembers.has(initiatorId) : false;
-          const isInitiator = !initiatorId || btnInt.user.id === initiatorId;
+        try {
+          if (btnInt.customId === 'q_first') currentPage = 1;
+          else if (btnInt.customId === 'q_prev') currentPage = Math.max(1, currentPage - 1);
+          else if (btnInt.customId === 'q_next') currentPage = Math.min(totalPages, currentPage + 1);
+          else if (btnInt.customId === 'q_last') currentPage = totalPages;
+          else if (btnInt.customId === 'q_clear') {
+            const initiatorId = player.sessionInitiatorId;
+            const btnVcMembers = btnInt.member?.voice?.channel?.members;
+            const initiatorInVoice = initiatorId && btnVcMembers ? btnVcMembers.has(initiatorId) : false;
+            const isInitiator = !initiatorId || btnInt.user.id === initiatorId;
 
-          if (!isInitiator && initiatorInVoice && !isSolo) {
-            return btnInt.reply({
-              embeds: [
-                new EmbedBuilder()
-                  .setColor(0xf43f5e)
-                  .setDescription(t('queue_initiator_only_clear', lang, { initiator: initiatorId }))
-              ],
-              ephemeral: true
+            if (!isInitiator && initiatorInVoice && !isSolo) {
+              return btnInt.reply({
+                embeds: [
+                  new EmbedBuilder()
+                    .setColor(0xf43f5e)
+                    .setDescription(t('queue_initiator_only_clear', lang, { initiator: initiatorId }))
+                ],
+                ephemeral: true
+              });
+            }
+
+            if (!isUserDJ(btnInt.member, guild.id) && !isSolo && !isInitiator) {
+              return btnInt.reply({ content: t('dj_only', lang), ephemeral: true });
+            }
+            const count = player.queue.tracks.length;
+            player.queue.tracks = [];
+            if (typeof syncPlayerState === 'function') syncPlayerState(player);
+            if (typeof syncAllGuildsState === 'function') syncAllGuildsState(botClient);
+
+            const clearedEmbed = new EmbedBuilder().setColor(0x10b981).setDescription(t('queue_cleared', lang, { count }));
+            if (btnInt.deferred || btnInt.replied) {
+              await btnInt.editReply({ embeds: [clearedEmbed], components: [] });
+            } else {
+              await btnInt.update({ embeds: [clearedEmbed], components: [] });
+            }
+            return;
+          }
+
+          if (btnInt.deferred || btnInt.replied) {
+            await btnInt.editReply({
+              embeds: [buildQueueEmbed(currentPage)],
+              components: [buildQueueButtons(currentPage)]
+            });
+          } else {
+            await btnInt.update({
+              embeds: [buildQueueEmbed(currentPage)],
+              components: [buildQueueButtons(currentPage)]
             });
           }
-
-          if (!isUserDJ(btnInt.member, guild.id) && !isSolo && !isInitiator) {
-            return btnInt.reply({ content: t('dj_only', lang), ephemeral: true });
-          }
-          const count = player.queue.tracks.length;
-          player.queue.tracks = [];
-          return btnInt.update({
-            embeds: [new EmbedBuilder().setColor(0x10b981).setDescription(t('queue_cleared', lang, { count }))],
-            components: []
-          });
+        } catch (err) {
+          console.warn('[QUEUE COLLECTOR ERR]', err.message);
+          try {
+            await btnInt.message.edit({
+              embeds: [buildQueueEmbed(currentPage)],
+              components: [buildQueueButtons(currentPage)]
+            });
+          } catch (e2) {}
         }
-
-        await btnInt.update({
-          embeds: [buildQueueEmbed(currentPage)],
-          components: [buildQueueButtons(currentPage)]
-        });
       });
 
       collector.on('end', async () => {
@@ -2166,6 +2238,330 @@ async function handleMusicCommand(ctx, cmdName, args = {}, client, helpers) {
     if (player) player.set('is247', next);
     return reply({
       embeds: [new EmbedBuilder().setColor(0x10b981).setDescription(next ? t('mode_247_enabled', lang) : t('mode_247_disabled', lang))]
+    });
+  }
+
+  // ==================== 25.5. PLAYLIST (CUSTOM USER/GUILD PLAYLISTS) ====================
+  if (cmdName === 'playlist') {
+    const rawQuery = (args.query || '').trim();
+    const queryTokens = rawQuery ? rawQuery.split(/\s+/) : [];
+
+    let sub = (args.subcommand || args.action || queryTokens[0] || '').toLowerCase().trim();
+    let plName = (args.name || queryTokens[1] || '').trim();
+    let subArg = (args.song || args.item || queryTokens.slice(2).join(' ') || '').trim();
+
+    // If only one token is provided and it's not a known subcommand keyword, treat it as view or play if playlist exists
+    const knownSubs = ['create', 'buat', 'save', 'simpan', 'load', 'play', 'putar', 'add', 'tambah', 'remove', 'hapus', 'del', 'delete', 'view', 'lihat', 'info', 'list', 'daftar', 'help', 'bantuan'];
+    if (!sub || sub === 'list' || sub === 'daftar') {
+      const userPlaylists = getUserPlaylists(user.id);
+      if (userPlaylists.length === 0) {
+        return reply({
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0x6366f1)
+              .setAuthor({ name: 'On Ao Playlist Studio', iconURL: client.user.displayAvatarURL() })
+              .setTitle(lang === 'en' ? '📂 Custom Playlists' : '📂 Daftar Playlist Tersimpan')
+              .setDescription(lang === 'en'
+                ? `You don't have any saved playlists yet!\n\n**Quick Start:**\n• Save current queue: \`on playlist save <name>\`\n• Create new playlist: \`on playlist create <name>\`\n• Play external link: \`on play <Spotify/YouTube playlist URL>\``
+                : `Kamu belum memiliki playlist tersimpan!\n\n**Cara Cepat:**\n• Simpan antrean saat ini: \`on playlist save <nama>\`\n• Buat playlist baru: \`on playlist create <nama>\`\n• Putar link eksternal: \`on play <link Spotify/YouTube playlist>\``
+              )
+              .setFooter({ text: 'On Ao Music Studio • on playlist help' })
+          ]
+        });
+      }
+
+      const listFields = userPlaylists.map((p, idx) => ({
+        name: `${idx + 1}. 📑 ${p.name}`,
+        value: `${lang === 'en' ? 'Tracks' : 'Total Lagu'}: **${p.trackCount}** | \`on playlist play ${p.name}\``,
+        inline: false
+      }));
+
+      return reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x10b981)
+            .setAuthor({ name: 'On Ao Playlist Studio', iconURL: client.user.displayAvatarURL() })
+            .setTitle(lang === 'en' ? `📂 Your Saved Playlists (${userPlaylists.length})` : `📂 Daftar Playlist Kamu (${userPlaylists.length})`)
+            .setDescription(lang === 'en' ? 'Here are all your saved personal playlists:' : 'Berikut adalah playlist musik yang telah kamu simpan:')
+            .addFields(listFields)
+            .setFooter({ text: 'Gunakan on playlist play <nama> untuk memutar playlist' })
+        ]
+      });
+    }
+
+    // Auto-detect if user typed `on playlist MyFavorites` without subcommand keyword
+    if (!knownSubs.includes(sub) && queryTokens.length > 0) {
+      plName = rawQuery;
+      sub = 'view';
+    }
+
+    // 1. CREATE SUBCOMMAND
+    if (sub === 'create' || sub === 'buat') {
+      if (!plName) {
+        return reply({
+          embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(lang === 'en' ? '❌ Please provide a playlist name! Example: `on playlist create My Rock Hits`' : '❌ Harap masukkan nama playlist! Contoh: `on playlist create Lagu Santai`')]
+        });
+      }
+
+      const created = createPlaylist(user.id, plName, []);
+      return reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x10b981)
+            .setTitle(lang === 'en' ? '✅ Playlist Created' : '✅ Playlist Berhasil Dibuat')
+            .setDescription(lang === 'en' ? `Playlist **${plName}** has been created! Add songs using \`on playlist add ${plName} <song>\`.` : `Playlist **${plName}** telah berhasil dibuat! Tambahkan lagu dengan \`on playlist add ${plName} <judul lagu>\`.`)
+        ]
+      });
+    }
+
+    // 2. SAVE ACTIVE QUEUE TO PLAYLIST
+    if (sub === 'save' || sub === 'simpan') {
+      if (!plName) {
+        return reply({
+          embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(lang === 'en' ? '❌ Please provide a playlist name to save to! Example: `on playlist save CurrentParty`' : '❌ Masukkan nama playlist untuk disimpan! Contoh: `on playlist save LaguNongkrong`')]
+        });
+      }
+
+      if (!player || (!player.queue?.current && (!player.queue?.tracks || player.queue.tracks.length === 0))) {
+        return reply({
+          embeds: [new EmbedBuilder().setColor(0xf59e0b).setDescription(lang === 'en' ? '⚠️ There are no active tracks playing or in queue to save.' : '⚠️ Tidak ada lagu yang sedang diputar atau dalam antrean untuk disimpan.')]
+        });
+      }
+
+      const allTracks = [];
+      if (player.queue.current) allTracks.push(player.queue.current);
+      if (player.queue.tracks) allTracks.push(...player.queue.tracks);
+
+      createPlaylist(user.id, plName, allTracks);
+
+      return reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x10b981)
+            .setAuthor({ name: 'On Ao Playlist Studio', iconURL: client.user.displayAvatarURL() })
+            .setTitle(lang === 'en' ? '💾 Queue Saved to Playlist' : '💾 Antrean Berhasil Disimpan ke Playlist')
+            .setDescription(lang === 'en'
+              ? `Saved **${allTracks.length} tracks** into playlist **${plName}**!\nPlay it anytime with \`on playlist play ${plName}\`.`
+              : `Berhasil menyimpan **${allTracks.length} lagu** ke dalam playlist **${plName}**!\nPutar kapan saja dengan \`on playlist play ${plName}\`.`
+            )
+        ]
+      });
+    }
+
+    // 3. PLAY / LOAD SUBCOMMAND
+    if (sub === 'play' || sub === 'load' || sub === 'putar') {
+      const targetName = plName || subArg;
+      if (!targetName) {
+        return reply({
+          embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(lang === 'en' ? '❌ Please provide the playlist name to play! Example: `on playlist play MyFavorites`' : '❌ Masukkan nama playlist yang ingin diputar! Contoh: `on playlist play LaguSantai`')]
+        });
+      }
+
+      // Check voice channel
+      if (!voiceChannel) {
+        return reply({
+          embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(t('voice_required', lang))]
+        });
+      }
+
+      const pl = getPlaylist(user.id, targetName);
+      if (!pl || !pl.tracks || pl.tracks.length === 0) {
+        return reply({
+          embeds: [new EmbedBuilder().setColor(0xf59e0b).setDescription(lang === 'en' ? `⚠️ Playlist **${targetName}** not found or is empty!` : `⚠️ Playlist **${targetName}** tidak ditemukan atau masih kosong!`)]
+        });
+      }
+
+      player = await getOrCreatePlayer();
+
+      const tracksToQueue = pl.tracks.map(t => (typeof createUniversalTrack === 'function' ? createUniversalTrack(t, user) : {
+        ...t,
+        requester: user,
+        info: {
+          title: t.title || 'Track',
+          author: t.author || 'Artist',
+          duration: t.duration || 180000,
+          uri: t.uri || '',
+          artworkUrl: t.artworkUrl || null,
+          requester: user
+        }
+      }));
+
+      await player.queue.add(tracksToQueue);
+      recordPlaybackSession({ title: pl.name, duration: pl.tracks.length * 180000 }, user, guild, voiceChannel);
+
+      if (!player.playing) {
+        player._skipTrackStartNotification = Date.now() + 10000;
+        if (player.set) player.set('skipTrackStartNotification', Date.now() + 10000);
+        await player.play();
+      }
+
+      return reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x10b981)
+            .setAuthor({ name: 'On Ao Music Studio', iconURL: client.user.displayAvatarURL() })
+            .setTitle(t('playlist_added', lang))
+            .setDescription(`**${pl.name}**\n${t('playlist_tracks', lang, { count: pl.tracks.length })}\n⚡ *${lang === 'en' ? 'Loaded from your saved playlists' : 'Dimuat dari playlist tersimpan kamu'}*`)
+            .addFields(
+              { name: t('requested_by', lang), value: user.username, inline: true },
+              { name: t('channel', lang), value: voiceChannel.name, inline: true },
+              { name: lang === 'en' ? 'Total Tracks' : 'Total Lagu', value: `🎶 ${pl.tracks.length} lagu`, inline: true }
+            )
+            .setTimestamp()
+        ],
+        components: createMusicControlButtons(player)
+      });
+    }
+
+    // 4. ADD TRACK TO PLAYLIST
+    if (sub === 'add' || sub === 'tambah') {
+      if (!plName || !subArg) {
+        return reply({
+          embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(lang === 'en' ? '❌ Usage: `on playlist add <playlist_name> <song_name_or_url>`' : '❌ Penggunaan: `on playlist add <nama_playlist> <judul_lagu_atau_link>`')]
+        });
+      }
+
+      const pl = getPlaylist(user.id, plName);
+      if (!pl) {
+        return reply({
+          embeds: [new EmbedBuilder().setColor(0xf59e0b).setDescription(lang === 'en' ? `⚠️ Playlist **${plName}** does not exist. Create it first using \`on playlist create ${plName}\`.` : `⚠️ Playlist **${plName}** belum ada. Buat terlebih dahulu dengan \`on playlist create ${plName}\`.`)]
+        });
+      }
+
+      let foundTrack = null;
+      try {
+        const dummyPlayer = player || client.lavalink?.getPlayer(guild.id) || client.nativeVoice?.getPlayer(guild.id) || client.nativeVoice;
+        const searchRes = await safePlayerSearch(dummyPlayer, subArg, user);
+        if (searchRes && searchRes.tracks && searchRes.tracks.length > 0) {
+          foundTrack = searchRes.tracks[0];
+        }
+      } catch (e) {}
+
+      if (!foundTrack) {
+        foundTrack = {
+          title: subArg,
+          author: 'Unknown Artist',
+          duration: 180000,
+          uri: /^https?:\/\//i.test(subArg) ? subArg : '',
+          artworkUrl: null
+        };
+      }
+
+      addTrackToPlaylist(user.id, pl.name, foundTrack);
+
+      return reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x10b981)
+            .setTitle(lang === 'en' ? '✅ Track Added to Playlist' : '✅ Lagu Berhasil Ditambahkan')
+            .setDescription(lang === 'en'
+              ? `Added **${getTrackTitle(foundTrack)}** to playlist **${pl.name}**!`
+              : `Berhasil menambahkan **${getTrackTitle(foundTrack)}** ke playlist **${pl.name}**!`
+            )
+        ]
+      });
+    }
+
+    // 5. REMOVE TRACK FROM PLAYLIST
+    if (sub === 'remove' || sub === 'hapus' || sub === 'deltrack') {
+      if (!plName || !subArg) {
+        return reply({
+          embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(lang === 'en' ? '❌ Usage: `on playlist remove <playlist_name> <track_number_or_title>`' : '❌ Penggunaan: `on playlist remove <nama_playlist> <nomor_atau_judul_lagu>`')]
+        });
+      }
+
+      const removed = removeTrackFromPlaylist(user.id, plName, subArg);
+      if (!removed) {
+        return reply({
+          embeds: [new EmbedBuilder().setColor(0xf59e0b).setDescription(lang === 'en' ? `⚠️ Could not find track "${subArg}" in playlist **${plName}**.` : `⚠️ Lagu "${subArg}" tidak ditemukan di playlist **${plName}**.`)]
+        });
+      }
+
+      return reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x10b981)
+            .setDescription(lang === 'en'
+              ? `🗑️ Removed **${removed.title}** from playlist **${plName}**.`
+              : `🗑️ Berhasil menghapus **${removed.title}** dari playlist **${plName}**.`
+            )
+        ]
+      });
+    }
+
+    // 6. VIEW / INFO PLAYLIST
+    if (sub === 'view' || sub === 'info' || sub === 'lihat' || sub === 'show') {
+      const targetName = plName || subArg || queryTokens.join(' ');
+      const pl = getPlaylist(user.id, targetName);
+      if (!pl) {
+        return reply({
+          embeds: [new EmbedBuilder().setColor(0xf59e0b).setDescription(lang === 'en' ? `⚠️ Playlist **${targetName}** not found!` : `⚠️ Playlist **${targetName}** tidak ditemukan!`)]
+        });
+      }
+
+      if (!pl.tracks || pl.tracks.length === 0) {
+        return reply({
+          embeds: [
+            new EmbedBuilder()
+              .setColor(0x6366f1)
+              .setTitle(`📑 Playlist: ${pl.name}`)
+              .setDescription(lang === 'en' ? 'This playlist is empty. Add songs using `on playlist add <name> <song>`!' : 'Playlist ini masih kosong. Tambahkan lagu dengan `on playlist add <nama> <lagu>`!')
+          ]
+        });
+      }
+
+      const trackListPreview = pl.tracks.slice(0, 15).map((t, idx) => `\`${idx + 1}.\` **${t.title}** - *${t.author}* (\`${formatDuration(t.duration || 180000)}\`)`).join('\n');
+      const overflow = pl.tracks.length > 15 ? `\n*...dan ${pl.tracks.length - 15} lagu lainnya.*` : '';
+
+      return reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x6366f1)
+            .setAuthor({ name: 'On Ao Playlist Studio', iconURL: client.user.displayAvatarURL() })
+            .setTitle(`📑 Playlist: ${pl.name} (${pl.tracks.length} ${lang === 'en' ? 'tracks' : 'lagu'})`)
+            .setDescription(`${trackListPreview}${overflow}\n\n▶️ *Ketik \`on playlist play ${pl.name}\` untuk memutar.*`)
+            .setFooter({ text: 'On Ao Music Studio' })
+        ]
+      });
+    }
+
+    // 7. DELETE PLAYLIST
+    if (sub === 'delete' || sub === 'del' || sub === 'hapus_pl') {
+      if (!plName) {
+        return reply({
+          embeds: [new EmbedBuilder().setColor(0xf43f5e).setDescription(lang === 'en' ? '❌ Please provide the playlist name to delete!' : '❌ Harap masukkan nama playlist yang ingin dihapus!')]
+        });
+      }
+
+      const deleted = deletePlaylist(user.id, plName);
+      if (!deleted) {
+        return reply({
+          embeds: [new EmbedBuilder().setColor(0xf59e0b).setDescription(lang === 'en' ? `⚠️ Playlist **${plName}** not found.` : `⚠️ Playlist **${plName}** tidak ditemukan.`)]
+        });
+      }
+
+      return reply({
+        embeds: [
+          new EmbedBuilder()
+            .setColor(0x10b981)
+            .setDescription(lang === 'en' ? `🗑️ Playlist **${plName}** has been deleted.` : `🗑️ Playlist **${plName}** berhasil dihapus.`)
+        ]
+      });
+    }
+
+    // 8. HELP GUIDE
+    return reply({
+      embeds: [
+        new EmbedBuilder()
+          .setColor(0x6366f1)
+          .setAuthor({ name: 'On Ao Playlist Studio', iconURL: client.user.displayAvatarURL() })
+          .setTitle(lang === 'en' ? '📑 On Ao Playlist Commands Guide' : '📑 Panduan Lengkap Perintah Playlist On Ao')
+          .setDescription(lang === 'en'
+            ? `• \`on playlist list\` - View your saved playlists\n• \`on playlist create <name>\` - Create a new empty playlist\n• \`on playlist save <name>\` - Save the active music queue to a playlist\n• \`on playlist play <name>\` - Play a saved playlist in voice channel\n• \`on playlist add <name> <song/url>\` - Add a song to a playlist\n• \`on playlist remove <name> <index>\` - Remove a song from a playlist\n• \`on playlist view <name>\` - View songs inside a playlist\n• \`on playlist delete <name>\` - Delete a saved playlist\n• \`on play <URL>\` - Directly plays Spotify, YouTube, or SoundCloud playlist links!`
+            : `• \`on playlist list\` - Lihat daftar playlist tersimpan kamu\n• \`on playlist create <nama>\` - Buat playlist baru\n• \`on playlist save <nama>\` - Simpan antrean musik yang sedang diputar ke playlist\n• \`on playlist play <nama>\` - Putar playlist tersimpan di voice channel\n• \`on playlist add <nama> <lagu/link>\` - Tambah lagu ke playlist\n• \`on playlist remove <nama> <nomor/judul>\` - Hapus lagu dari playlist\n• \`on playlist view <nama>\` - Lihat daftar lagu dalam playlist\n• \`on playlist delete <nama>\` - Hapus playlist tersimpan\n• \`on play <link>\` - Langsung putar link playlist Spotify, YouTube, atau SoundCloud!`
+          )
+          .setFooter({ text: 'On Ao Music Studio' })
+      ]
     });
   }
 

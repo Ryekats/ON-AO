@@ -52,6 +52,16 @@ const {
 } = require('./src/bot/profile-manager.cjs');
 const { fetchSongLyrics } = require('./src/bot/lyrics-service.cjs');
 const {
+  getUserPlaylists,
+  getPlaylist,
+  createPlaylist,
+  addTrackToPlaylist,
+  removeTrackFromPlaylist,
+  deletePlaylist,
+  resolveYouTubePlaylist,
+  createUniversalTrack
+} = require('./src/bot/playlist-manager.cjs');
+const {
   guildPlaybackSnapshots,
   getGuildPlaybackSnapshot,
   saveGuildPlaybackSnapshot,
@@ -271,7 +281,7 @@ function getGuildPlayer(guildId) {
 async function safePlayerSearch(player, query, requester) {
   if (!player || !query) return null;
 
-  // A. Spotify Resolver
+  // A. Spotify Resolver (Instant track & playlist mapping)
   if (isSpotifyUrl(query)) {
     try {
       const spData = await resolveSpotify(query);
@@ -287,34 +297,34 @@ async function safePlayerSearch(player, query, requester) {
             }
             return { loadType: 'track', tracks: [track] };
           }
-        } else if (spData.type === 'playlist' && Array.isArray(spData.tracks)) {
-          const resolvedTracks = [];
-          const batchSize = 10;
-          for (let i = 0; i < spData.tracks.length; i += batchSize) {
-            const batch = spData.tracks.slice(i, i + batchSize);
-            const results = await Promise.all(
-              batch.map(item =>
-                player.search({ query: item.query, source: 'ytmsearch' }, requester)
-                  .then(r => (r && r.tracks && r.tracks.length > 0) ? r.tracks[0] : null)
-                  .catch(() => null)
-              )
-            );
-            results.forEach((t, index) => {
-              if (t) {
-                const spItem = batch[index];
-                if (spItem && spItem.artworkUrl) {
-                  if (!t.info) t.info = {};
-                  t.info.artworkUrl = spItem.artworkUrl;
-                  t.artworkUrl = spItem.artworkUrl;
-                }
-                resolvedTracks.push(t);
-              }
-            });
-          }
+          // Fallback direct track object
+          const directTrack = createUniversalTrack({
+            title: spData.title,
+            author: spData.artist || 'Spotify',
+            duration: spData.durationMs || 180000,
+            uri: spData.spotifyUrl || query,
+            artworkUrl: spData.artworkUrl || null,
+            query: spData.query
+          }, requester);
+          return { loadType: 'track', tracks: [directTrack] };
+        } else if ((spData.type === 'playlist' || spData.type === 'album') && Array.isArray(spData.tracks)) {
+          const resolvedTracks = spData.tracks.map(item => createUniversalTrack({
+            title: item.title || 'Spotify Track',
+            author: item.artist || 'Spotify',
+            duration: item.durationMs || 180000,
+            uri: item.spotifyUrl || query,
+            artworkUrl: item.artworkUrl || spData.artworkUrl || null,
+            query: item.query
+          }, requester)).filter(Boolean);
+
           if (resolvedTracks.length > 0) {
             return {
               loadType: 'playlist',
-              playlist: { title: spData.title, name: spData.title },
+              playlist: {
+                title: spData.title || (spData.type === 'album' ? 'Spotify Album' : 'Spotify Playlist'),
+                name: spData.title || (spData.type === 'album' ? 'Spotify Album' : 'Spotify Playlist'),
+                artworkUrl: spData.artworkUrl || resolvedTracks[0]?.artworkUrl || null
+              },
               tracks: resolvedTracks
             };
           }
@@ -325,8 +335,21 @@ async function safePlayerSearch(player, query, requester) {
     }
   }
 
-  // B. YouTube oEmbed
-  if (/youtube\.com|youtu\.be/i.test(query) && !query.includes('playlist')) {
+  // B. YouTube Playlist Resolver
+  if (/youtube\.com|youtu\.be/i.test(query) && (query.includes('list=') || query.includes('/playlist'))) {
+    try {
+      const ytPl = await resolveYouTubePlaylist(query);
+      if (ytPl && ytPl.tracks && ytPl.tracks.length > 0) {
+        ytPl.tracks.forEach(t => { t.requester = requester || null; });
+        return ytPl;
+      }
+    } catch (ytErr) {
+      console.warn('[YT PLAYLIST SEARCH WARN]', ytErr.message);
+    }
+  }
+
+  // C. YouTube Single Track oEmbed
+  if (/youtube\.com|youtu\.be/i.test(query) && !query.includes('list=')) {
     const ytOembed = await resolveYouTubeUrl(query);
     if (ytOembed && ytOembed.searchQuery) {
       const oembedRes = await player.search({ query: ytOembed.searchQuery, source: 'ytmsearch' }, requester).catch(() => null);
@@ -341,7 +364,7 @@ async function safePlayerSearch(player, query, requester) {
     }
   }
 
-  // C. Standard Sources (ytmsearch -> ytsearch -> scsearch -> direct)
+  // D. Standard Sources (ytmsearch -> ytsearch -> scsearch -> direct)
   const sources = [
     { query, source: 'ytmsearch' },
     { query, source: 'ytsearch' },
@@ -361,7 +384,7 @@ async function safePlayerSearch(player, query, requester) {
     } catch (e) {}
   }
 
-  // D. Fallback Native Voice Engine Search
+  // E. Fallback Native Voice Engine Search
   if (botClient?.nativeVoice) {
     try {
       const nativeRes = await botClient.nativeVoice.search(query, requester);
@@ -959,7 +982,15 @@ async function startBot() {
       syncPlayerState,
       triggerAutoplayNext,
       fetchAutoplayRecommendation,
-      handleControllerSkipWithAutoplay
+      handleControllerSkipWithAutoplay,
+      getUserPlaylists,
+      getPlaylist,
+      createPlaylist,
+      addTrackToPlaylist,
+      removeTrackFromPlaylist,
+      deletePlaylist,
+      resolveYouTubePlaylist,
+      createUniversalTrack
     };
 
     // Interaction Dispatcher (Slash commands & Button Controllers)
@@ -1039,6 +1070,108 @@ async function startBot() {
                 ephemeral: true
               });
             }
+          }
+
+          if (customId.startsWith('q_')) {
+            const upcoming = player.queue.tracks || [];
+            const current = player.queue.current;
+            const pageSize = 10;
+            const totalPages = Math.max(1, Math.ceil(upcoming.length / pageSize));
+
+            let currentPage = 1;
+            const titleText = interaction.message?.embeds?.[0]?.title || '';
+            const footerText = interaction.message?.embeds?.[0]?.footer?.text || '';
+            const pageMatch = (titleText + ' ' + footerText).match(/Page\s+(\d+)\/(\d+)/i);
+            if (pageMatch) {
+              currentPage = parseInt(pageMatch[1], 10) || 1;
+            }
+
+            if (customId === 'q_first') currentPage = 1;
+            else if (customId === 'q_prev') currentPage = Math.max(1, currentPage - 1);
+            else if (customId === 'q_next') currentPage = Math.min(totalPages, currentPage + 1);
+            else if (customId === 'q_last') currentPage = totalPages;
+            else if (customId === 'q_clear') {
+              const isSolo = memberVoice?.members?.filter(m => !m.user.bot).size <= 1;
+              const isDJ = isUserDJ(interaction.member, guild.id);
+              const isInitiator = !initiatorId || interaction.user.id === initiatorId;
+
+              if (!isInitiator && !isDJ && !isSolo) {
+                return await interaction.reply({ content: t('dj_only', lang), ephemeral: true });
+              }
+              const count = upcoming.length;
+              player.queue.tracks = [];
+              if (typeof syncPlayerState === 'function') syncPlayerState(player);
+              if (typeof syncAllGuildsState === 'function') syncAllGuildsState(botClient);
+
+              const clearedEmbed = new EmbedBuilder().setColor(0x10b981).setDescription(t('queue_cleared', lang, { count }));
+              return await interaction.update({ embeds: [clearedEmbed], components: [] }).catch(() => {});
+            }
+
+            const buildQueueEmbed = (page) => {
+              const startIdx = (page - 1) * pageSize;
+              const tracksOnPage = upcoming.slice(startIdx, startIdx + pageSize);
+
+              const embed = new EmbedBuilder()
+                .setColor(0x6366f1)
+                .setTitle(`📜 ${lang === 'en' ? 'Server Music Queue' : 'Antrian Musik Server'} (Page ${page}/${totalPages})`)
+                .setFooter({ text: `${lang === 'en' ? 'Total Tracks' : 'Total Lagu'}: ${upcoming.length + (current ? 1 : 0)} • On Ao Music Studio` })
+                .setTimestamp();
+
+              if (current) {
+                embed.addFields({
+                  name: t('now_playing', lang),
+                  value: `**[${getTrackTitle(current)}](${getTrackUri(current)})** - \`${formatDuration(getTrackDuration(current))}\``
+                });
+              }
+
+              if (tracksOnPage.length > 0) {
+                const listStr = tracksOnPage
+                  .map((tr, idx) => `**${startIdx + idx + 1}.** [${getTrackTitle(tr)}](${getTrackUri(tr)}) - \`${formatDuration(getTrackDuration(tr))}\``)
+                  .join('\n');
+                embed.addFields({ name: lang === 'en' ? `⏳ Up Next (${upcoming.length} songs)` : `⏳ Akan Datang (${upcoming.length} lagu)`, value: listStr });
+              } else {
+                embed.addFields({ name: lang === 'en' ? '⏳ Up Next' : '⏳ Akan Datang', value: t('queue_empty', lang) });
+              }
+
+              return embed;
+            };
+
+            const buildQueueButtons = (page) => {
+              return new ActionRowBuilder().addComponents(
+                new ButtonBuilder()
+                  .setCustomId('q_first')
+                  .setLabel('⏮️')
+                  .setStyle(ButtonStyle.Secondary)
+                  .setDisabled(page <= 1),
+                new ButtonBuilder()
+                  .setCustomId('q_prev')
+                  .setLabel('◀️')
+                  .setStyle(ButtonStyle.Primary)
+                  .setDisabled(page <= 1),
+                new ButtonBuilder()
+                  .setCustomId('q_next')
+                  .setLabel('▶️')
+                  .setStyle(ButtonStyle.Primary)
+                  .setDisabled(page >= totalPages),
+                new ButtonBuilder()
+                  .setCustomId('q_last')
+                  .setLabel('⏭️')
+                  .setStyle(ButtonStyle.Secondary)
+                  .setDisabled(page >= totalPages),
+                new ButtonBuilder()
+                  .setCustomId('q_clear')
+                  .setLabel(lang === 'en' ? 'Clear' : 'Kosongkan')
+                  .setEmoji('🗑️')
+                  .setStyle(ButtonStyle.Danger)
+                  .setDisabled(upcoming.length === 0)
+              );
+            };
+
+            await interaction.update({
+              embeds: [buildQueueEmbed(currentPage)],
+              components: totalPages > 1 || upcoming.length > 0 ? [buildQueueButtons(currentPage)] : []
+            }).catch(() => {});
+            return;
           }
 
           await interaction.deferUpdate().catch(() => {});

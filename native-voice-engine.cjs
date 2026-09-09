@@ -305,7 +305,7 @@ class NativeGuildPlayer extends EventEmitter {
     return this;
   }
 
-  async reconnectAndResume(targetChannelId, savedTrackOverride = null, savedSeekSecOverride = null) {
+  async reconnectAndResume(targetChannelId, savedTrackOverride = null, savedSeekSecOverride = null, savedQueueOverride = null) {
     this.isAutoReconnecting = true;
     this.isStopping = false;
 
@@ -314,6 +314,10 @@ class NativeGuildPlayer extends EventEmitter {
     const seekSec = (typeof savedSeekSecOverride === 'number' && savedSeekSecOverride >= 0)
       ? savedSeekSecOverride
       : Math.max(0, Math.floor((this.position || this.lastPlaybackPosition || 0) / 1000));
+
+    if (savedQueueOverride && Array.isArray(savedQueueOverride) && savedQueueOverride.length > 0) {
+      this.queue.tracks = [...savedQueueOverride];
+    }
 
     console.log(`[AUTO-RECONNECT] 🛡️ Membersihkan koneksi lama dan menghubungkan kembali ke channel ${channelId} (Resume di ${seekSec}s)...`);
 
@@ -373,6 +377,8 @@ class NativeGuildPlayer extends EventEmitter {
     // 3. Trigger resume/play on the current track at saved position
     if (currentTrack) {
       this.queue.current = currentTrack;
+      this.playing = true;
+      this.paused = false;
       console.log(`[AUTO-RESUME] 🎶 Melanjutkan trek: "${currentTrack.title || currentTrack.info?.title}" di ${seekSec} detik.`);
       try {
         await this.playTrack(currentTrack, seekSec);
@@ -489,7 +495,9 @@ class NativeGuildPlayer extends EventEmitter {
     await this.connect();
 
     this.queue.current = track;
+    this.playing = true;
     this.position = (seekSeconds || 0) * 1000;
+    this.lastPlaybackPosition = this.position;
 
     const uri = track.uri || track.info?.uri || track.url;
 
@@ -579,14 +587,26 @@ class NativeGuildPlayer extends EventEmitter {
         targetUrl = track.permalink;
       }
 
+      let useFfmpegSeek = false;
       if (targetUrl) {
         track.resolvedWebUrl = targetUrl;
         const seekOpt = seekSeconds ? { seek: Math.floor(seekSeconds), quality: 2 } : { quality: 2 };
         try {
           streamData = await play.stream(targetUrl, seekOpt);
         } catch (ytErr) {
-          if (ytErr.message?.includes('Sign in') || ytErr.message?.includes('bot')) {
-            console.warn(`[NATIVE STREAM YT BLOCKED] YouTube URL blocked, switching to SoundCloud for "${track.title}"...`);
+          console.warn(`[NATIVE STREAM WARN] Stream with seek failed for "${track.title}": ${ytErr.message}. Attempting fallback...`);
+
+          if (seekSeconds > 0) {
+            try {
+              streamData = await play.stream(targetUrl, { quality: 2 });
+              useFfmpegSeek = true;
+            } catch (noSeekErr) {
+              console.warn(`[NATIVE STREAM WARN] Standard stream without seek failed: ${noSeekErr.message}`);
+            }
+          }
+
+          if (!streamData) {
+            console.warn(`[NATIVE STREAM YT/SC FALLBACK] Switching to SoundCloud search for "${track.title}"...`);
             const rawTitle = (track.title || track.info?.title || '').replace(/Official Audio|Official Music Video|Official Video|Lyrics|Audio|HD|4K/gi, '').trim();
             const rawArtist = (track.author || track.info?.author || '').replace(/VEVO|- Topic|Official/gi, '').trim();
             const scQuery = `${rawArtist} ${rawTitle}`.trim() || track.title;
@@ -596,10 +616,21 @@ class NativeGuildPlayer extends EventEmitter {
               const scUrl = bestSc.permalink || bestSc.url;
               if (scUrl) {
                 track.resolvedWebUrl = scUrl;
-                streamData = await play.stream(scUrl, seekOpt);
+                try {
+                  streamData = await play.stream(scUrl, seekOpt);
+                } catch (scSeekErr) {
+                  try {
+                    streamData = await play.stream(scUrl, { quality: 2 });
+                    if (seekSeconds > 0) useFfmpegSeek = true;
+                  } catch (scNoSeekErr) {
+                    console.warn('[SC FALLBACK ERR]', scNoSeekErr.message);
+                  }
+                }
               }
             }
-          } else {
+          }
+
+          if (!streamData) {
             throw ytErr;
           }
         }
@@ -612,23 +643,20 @@ class NativeGuildPlayer extends EventEmitter {
         const filterStr = this.buildFFmpegFilterString();
         const hasFilters = Boolean(filterStr && filterStr.length > 0);
 
-        if (seekSeconds > 0 || hasFilters) {
-          if (seekSeconds > 0) {
-            console.log(`[NATIVE SEEK] ⏩ Seeking to ${seekSeconds}s via FFmpeg transcode (Filters: ${filterStr || 'none'}).`);
-          } else {
-            console.log(`[NATIVE FILTER] 🎛️ Transcoding audio with FFmpeg filters: "${filterStr}".`);
-          }
+        if (hasFilters || useFfmpegSeek) {
+          console.log(`[NATIVE TRANSCODE] 🎛️ FFmpeg processing (Filters: "${filterStr || 'none'}", FFmpeg Seek: ${useFfmpegSeek ? seekSeconds + 's' : 'none'}).`);
 
           try {
             const ffmpegArgs = [
               '-analyzeduration', '0',
-              '-loglevel', '0',
-              '-i', 'pipe:0'
+              '-loglevel', '0'
             ];
 
-            if (seekSeconds > 0) {
+            if (useFfmpegSeek && seekSeconds > 0) {
               ffmpegArgs.push('-ss', String(Math.floor(seekSeconds)));
             }
+
+            ffmpegArgs.push('-i', 'pipe:0');
 
             if (hasFilters) {
               ffmpegArgs.push('-af', filterStr);
@@ -653,6 +681,9 @@ class NativeGuildPlayer extends EventEmitter {
             inputType = streamData.type || StreamType.Arbitrary;
           }
         } else {
+          if (seekSeconds > 0) {
+            console.log(`[NATIVE SEEK] ⏩ Audio seeked to ${seekSeconds}s via play-dl stream.`);
+          }
           finalStream = streamData.stream;
           inputType = streamData.type || StreamType.Arbitrary;
         }
@@ -680,6 +711,11 @@ class NativeGuildPlayer extends EventEmitter {
     } catch (streamErr) {
       console.warn(`[NATIVE STREAM ERROR] Track "${track.title || uri}":`, streamErr.message);
       this.isSeeking = false;
+      if (this.isAutoReconnecting) {
+        console.warn(`[AUTO-RECONNECT] Stream error during auto-reconnect. Retaining track "${track.title}" in player.`);
+        this.queue.current = track;
+        return;
+      }
       if (this.queue.tracks.length > 0) {
         const next = this.queue.tracks.shift();
         return await this.playTrack(next);

@@ -8,7 +8,7 @@
       "status": "connected",
       "attempts": 0,
       "ping": null,
-      "updatedAt": 1788922852570
+      "updatedAt": 1788934939393
     },
     {
       "id": "custom-primary",
@@ -18,8 +18,8 @@
       "status": "disconnected",
       "attempts": 0,
       "ping": null,
-      "updatedAt": 1788922852570
+      "updatedAt": 1788934939393
     }
   ],
-  "updatedAt": 1788922852570
+  "updatedAt": 1788934939393
 }

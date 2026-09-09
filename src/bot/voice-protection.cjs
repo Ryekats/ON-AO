@@ -351,9 +351,11 @@ async function handleAntiDisconnect(oldState, player, botClient, helpers) {
     realPosition = player.position;
   } else if (typeof player?.lastPlaybackPosition === 'number' && player.lastPlaybackPosition > 0) {
     realPosition = player.lastPlaybackPosition;
-  } else if (snapshot.position) {
-    const elapsed = (snapshot.isPlaying && snapshot.savedAt) ? (Date.now() - snapshot.savedAt) : 0;
-    realPosition = Math.min(snapshot.duration || Infinity, snapshot.position + elapsed);
+  } else if (snapshot && typeof snapshot.position === 'number' && snapshot.savedAt) {
+    const elapsed = (snapshot.isPlaying !== false) ? (Date.now() - snapshot.savedAt) : 0;
+    const trackDur = curTrack?.duration || curTrack?.info?.duration || snapshot.duration || 0;
+    const calculated = snapshot.position + elapsed;
+    realPosition = trackDur > 0 ? Math.min(trackDur, calculated) : calculated;
   }
 
   saveGuildPlaybackSnapshot(guild.id, player, {
@@ -375,7 +377,8 @@ async function handleAntiDisconnect(oldState, player, botClient, helpers) {
     return;
   }
 
-  const returnChannelId = player?.sessionVoiceChannelId || player?.voiceChannelId || snapshot.voiceChannelId || oldState.channelId;
+  let returnChannelId = player?.sessionVoiceChannelId || snapshot.voiceChannelId || oldState.channelId || player?.voiceChannelId;
+
   const returnChannel = guild.channels.cache.get(returnChannelId);
   const wasActive = Boolean(player?.playing || curTrack || (player?.queue?.tracks && player.queue.tracks.length > 0) || (snapshot.queueTracks && snapshot.queueTracks.length > 0) || player?.get?.('is247') || snapshot.is247);
 
@@ -452,7 +455,10 @@ async function handleAntiDisconnect(oldState, player, botClient, helpers) {
         const resumeSec = Math.floor(resumeMs / 1000);
 
         if (typeof activePlayer.reconnectAndResume === 'function') {
-          await activePlayer.reconnectAndResume(returnChannelId, savedTrack, resumeSec);
+          await activePlayer.reconnectAndResume(returnChannelId, savedTrack, resumeSec, savedQueue);
+          if (savedTrack && !activePlayer.queue.current) {
+            activePlayer.queue.current = savedTrack;
+          }
         } else {
           await activePlayer.connect();
           await new Promise(r => setTimeout(r, 600));
@@ -545,3 +551,4 @@ module.exports = {
   handleFollowInitiator,
   handleAntiDisconnect
 };
+
