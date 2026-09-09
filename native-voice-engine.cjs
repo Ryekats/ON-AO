@@ -558,7 +558,7 @@ class NativeGuildPlayer extends EventEmitter {
 
       if (targetUrl) {
         track.resolvedWebUrl = targetUrl;
-        const seekOpt = seekSeconds ? { seek: Math.floor(seekSeconds) } : undefined;
+        const seekOpt = seekSeconds ? { seek: Math.floor(seekSeconds), quality: 2 } : { quality: 2 };
         try {
           streamData = await play.stream(targetUrl, seekOpt);
         } catch (ytErr) {
@@ -763,11 +763,6 @@ class NativeGuildPlayer extends EventEmitter {
       } else if (preset === 'studio') {
         parts.push('equalizer=f=250:t=q:w=1:g=-1,equalizer=f=4000:t=q:w=1:g=2');
       }
-    }
-
-    // 6. Audio Limiter & Anti-Clipping Guard (Guarantees crystal clear HD sound without distortion/crackle)
-    if (parts.length > 0) {
-      parts.push('alimiter=level_in=1:level_out=0.95:limit=0.95:attack=5:release=50:asc=1');
     }
 
     return parts.join(',');

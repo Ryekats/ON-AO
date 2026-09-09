@@ -738,7 +738,7 @@ async function startBot() {
       playerOptions: {
         clientBasedPositionUpdateInterval: 150,
         defaultSearchPlatform: 'ytmsearch',
-        volumeDecrementer: 0.75,
+        volumeDecrementer: 1.0,
         onVolumeChange: (player, volume) => {
           player.volume = volume;
           syncPlayerState(player);
@@ -796,20 +796,6 @@ async function startBot() {
     });
 
     const handleTrackStart = async (player, track) => {
-      // Studio Crossfade / Gapless smooth volume ramp
-      const crossfadeSec = player.get ? (player.get('crossfade_seconds') || 0) : 0;
-      if (crossfadeSec > 0) {
-        const targetVol = player.volume || 100;
-        const initialVol = Math.max(15, Math.floor(targetVol * 0.35));
-        player.setVolume(initialVol).catch(() => {});
-        setTimeout(() => {
-          player.setVolume(Math.floor(targetVol * 0.75)).catch(() => {});
-        }, Math.floor((crossfadeSec * 1000) / 2));
-        setTimeout(() => {
-          player.setVolume(targetVol).catch(() => {});
-        }, crossfadeSec * 1000);
-      }
-
       syncPlayerState(player);
       saveGuildPlaybackSnapshot(player.guildId, player, { currentTrack: track, position: 0 });
 
