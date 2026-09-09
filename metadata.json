@@ -1,0 +1,8 @@
+{
+  "name": "Remix Remix On Ao - Discord Bot Studio",
+  "description": "Discord music bot management studio and live controller for On Ao v3.0.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
